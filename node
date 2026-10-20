@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Steez AI | Fit Checker</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="bg-black text-white flex justify-center min-h-screen">
+
+  <div class="w-full max-w-[420px] min-h-screen bg-black flex flex-col justify-between relative overflow-hidden border-x border-zinc-900 shadow-2xl">
+
+    <!-- Top Bar with Dynamic Weather Chip -->
+    <header class="pt-3 px-5 pb-2 flex items-center justify-between z-30 border-b border-zinc-900/60">
+      <div class="flex items-center gap-2">
+        <span class="text-xl font-black tracking-tight">Steez</span>
+        <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-white/10 text-zinc-300">Free</span>
+      </div>
+
+      <!-- Weather widget (Auto location + manual fallback click) -->
+      <button id="weatherPill" onclick="toggleWeatherManualPrompt()" class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-xs font-semibold text-zinc-300 hover:border-zinc-700 transition-all">
+        <i id="weatherIcon" data-lucide="cloud-sun" class="w-3.5 h-3.5 text-amber-400"></i>
+        <span id="weatherText">Detecting...</span>
+      </button>
+    </header>
+
+    <!-- MAIN SCROLLABLE CONTAINER -->
+    <div class="flex-1 flex flex-col px-5 pb-24 overflow-y-auto no-scrollbar relative pt-4">
+
+      <!-- ==================== FIRST-TIME ONBOARDING FLOW ==================== -->
+      
+      <!-- Screen 1: Simple Splash -->
+      <div id="screen-welcome" class="screen flex-1 flex flex-col justify-between items-center text-center py-4">
+        <div class="w-full flex flex-col items-center">
+          <div class="w-56 h-64 rounded-3xl bg-zinc-900/80 border border-zinc-800 flex flex-col items-center justify-center p-4 relative shadow-inner overflow-hidden my-4">
+            <div class="w-16 h-16 rounded-full bg-zinc-700/60 mb-2"></div>
+            <div class="w-32 h-24 bg-blue-950/70 border border-blue-800/40 rounded-xl mb-1 flex items-center justify-center text-xs text-blue-300 font-mono">jacket</div>
+            <div class="w-24 h-24 bg-indigo-900/50 border border-indigo-700/40 rounded-b-xl flex items-center justify-center text-xs text-indigo-200 font-mono">pants</div>
+            <div class="absolute inset-4 border border-zinc-600/20 rounded-2xl pointer-events-none flex items-center justify-center">
+              <div class="w-full h-0.5 bg-gradient-to-r from-transparent via-blue-500 to-transparent absolute top-1/2 -translate-y-1/2 animate-pulse"></div>
+            </div>
+          </div>
+          <h1 class="text-3xl font-black tracking-tight mt-2">Outfit ratings,<br/>made easy</h1>
+          <p class="text-zinc-400 text-xs mt-2 max-w-xs">3 quick questions to set your baseline score. The app handles the rest.</p>
+        </div>
+        <button onclick="goToOnboardingStep(0)" class="w-full py-4 rounded-2xl bg-white text-black font-extrabold text-sm tracking-wide shadow-lg active:scale-95 transition-all">
+          Quick Setup (30s)
+        </button>
+      </div>
+
+      <!-- Screen 2: 3-Step Baseline Setup (Essential Profile Facts) -->
+      <div id="screen-quick-setup" class="screen hidden flex-1 flex flex-col justify-between">
+        <div>
+          <!-- Step indicator dots -->
+          <div class="flex items-center gap-1.5 mb-6">
+            <div id="dot-0" class="h-1 flex-1 rounded-full bg-white transition-all"></div>
+            <div id="dot-1" class="h-1 flex-1 rounded-full bg-zinc-800 transition-all"></div>
+            <div id="dot-2" class="h-1 flex-1 rounded-full bg-zinc-800 transition-all"></div>
+          </div>
+
+          <span class="text-[11px] font-bold text-zinc-500 uppercase tracking-wider block mb-1" id="stepCounter">Step 1 of 3</span>
+          <h2 id="setupTitle" class="text-2xl font-bold tracking-tight mb-1">Preferred Fit Silhouette</h2>
+          <p id="setupSubtitle" class="text-xs text-zinc-500 mb-6">How do you prefer your clothes to hang?</p>
+          <div id="setupOptions" class="space-y-3"></div>
+        </div>
+        <button id="setupNextBtn" onclick="nextOnboardingQuestion()" class="w-full py-4 rounded-2xl bg-white text-black font-bold text-sm tracking-wide active:scale-95 transition-all">
+          Continue
+        </button>
+      </div>
+
+      <!-- ==================== MAIN TABS ==================== -->
+
+      <!-- TAB 1: HOME -->
+      <div id="tab-home" class="app-tab hidden space-y-5">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-zinc-400">Daily Streak:</span>
+            <span class="text-xs font-bold bg-zinc-900 px-2.5 py-1 rounded-full border border-zinc-800">🔥 1 Day</span>
+          </div>
+          <span id="homeStyleTag" class="text-xs font-semibold px-2.5 py-1 bg-zinc-900 border border-zinc-800 rounded-full text-zinc-400">Streetwear</span>
+        </div>
+
+        <!-- Weekly Strip -->
+        <div class="grid grid-cols-7 gap-1 text-center py-2 px-1 rounded-2xl bg-zinc-950 border border-zinc-800 text-[11px]">
+          <div><span class="text-zinc-500 block text-[9px]">Sun</span><span class="font-bold">18</span></div>
+          <div class="bg-blue-600 text-white rounded-xl py-1"><span class="block text-[9px]">Mon</span><span class="font-extrabold">19</span></div>
+          <div><span class="text-zinc-500 block text-[9px]">Tue</span><span class="font-bold">20</span></div>
+          <div><span class="text-zinc-500 block text-[9px]">Wed</span><span class="font-bold">21</span></div>
+          <div><span class="text-zinc-500 block text-[9px]">Thu</span><span class="font-bold">22</span></div>
+          <div><span class="text-zinc-500 block text-[9px]">Fri</span><span class="font-bold">23</span></div>
+          <div><span class="text-zinc-500 block text-[9px]">Sat</span><span class="font-bold">24</span></div>
+        </div>
+
+        <!-- Main Fit Score Widget -->
+        <div class="p-5 rounded-3xl bg-zinc-950 border border-zinc-800">
+          <div class="flex items-start justify-between">
+            <div>
+              <div class="flex items-baseline gap-1">
+                <span class="text-4xl font-black text-white" id="mainScoreDisplay">74</span>
+                <span class="text-zinc-500 text-sm font-semibold">/100</span>
+              </div>
+              <p class="text-xs text-zinc-400 mt-1">Today's fit · <span class="text-emerald-400 font-semibold">Clean Coordination</span></p>
+            </div>
+            <div class="w-10 h-10 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center">
+              <i data-lucide="sparkles" class="w-5 h-5 text-amber-400"></i>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 mt-5 text-center">
+            <div class="p-3 bg-zinc-900/60 border border-zinc-800/80 rounded-2xl">
+              <span class="text-sm font-extrabold text-blue-400">76<span class="text-[9px] text-zinc-500 font-normal">/100</span></span>
+              <span class="text-[10px] text-zinc-400 block mt-0.5">Silhouette</span>
+            </div>
+            <div class="p-3 bg-zinc-900/60 border border-zinc-800/80 rounded-2xl">
+              <span class="text-sm font-extrabold text-cyan-400">82<span class="text-[9px] text-zinc-500 font-normal">/100</span></span>
+              <span class="text-[10px] text-zinc-400 block mt-0.5">Color Mix</span>
+            </div>
+            <div class="p-3 bg-zinc-900/60 border border-zinc-800/80 rounded-2xl">
+              <span class="text-sm font-extrabold text-purple-400">65<span class="text-[9px] text-zinc-500 font-normal">/100</span></span>
+              <span class="text-[10px] text-zinc-400 block mt-0.5">Weather Sync</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Scan Launcher -->
+        <button onclick="openPreScanModal()" class="w-full py-4 rounded-2xl bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 flex items-center justify-center gap-2 text-sm font-bold text-white transition-all shadow-md active:scale-95">
+          <i data-lucide="camera" class="w-4 h-4 text-blue-400"></i>
+          Scan Today's Fit
+        </button>
+
+        <!-- Recent Logs Feed -->
+        <div>
+          <span class="text-xs font-bold text-zinc-400 uppercase tracking-wider block mb-2">Recent Outfits</span>
+          <div id="recentScansContainer" class="space-y-2">
+            <div class="p-3.5 rounded-2xl bg-zinc-950 border border-zinc-800 flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-zinc-900 flex items-center justify-center font-bold text-xs text-zinc-400">🧥</div>
+                <div>
+                  <h4 class="text-xs font-bold text-zinc-200">Layered School Oversize</h4>
+                  <p class="text-[10px] text-zinc-500 mt-0.5">74 Fit Score · 65°F Mild</p>
+                </div>
+              </div>
+              <span class="text-xs text-zinc-400">Today</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: STREAMLINED CLOSET -->
+      <div id="tab-closet" class="app-tab hidden space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-2xl font-black">Closet</h2>
+            <p class="text-xs text-zinc-400">Your digital wardrobe</p>
+          </div>
+          <button onclick="document.getElementById('closetPhotoUpload').click()" class="h-9 px-3 rounded-xl bg-white text-black font-bold text-xs flex items-center gap-1.5 shadow-md">
+            <i data-lucide="plus" class="w-3.5 h-3.5 stroke-[3]"></i> Add Item
+          </button>
+          <input type="file" id="closetPhotoUpload" accept="image/*" class="hidden" onchange="handleClosetItemUpload(event)" />
+        </div>
+
+        <!-- Category Filters -->
+        <div class="flex gap-2 overflow-x-auto no-scrollbar py-1 text-xs font-semibold">
+          <button onclick="filterCloset('all')" class="closet-filter active px-3.5 py-1.5 rounded-xl bg-white text-black">All (<span id="count-all">4</span>)</button>
+          <button onclick="filterCloset('tops')" class="closet-filter px-3.5 py-1.5 rounded-xl bg-zinc-900 text-zinc-400 border border-zinc-800">Tops</button>
+          <button onclick="filterCloset('bottoms')" class="closet-filter px-3.5 py-1.5 rounded-xl bg-zinc-900 text-zinc-400 border border-zinc-800">Bottoms</button>
+          <button onclick="filterCloset('shoes')" class="closet-filter px-3.5 py-1.5 rounded-xl bg-zinc-900 text-zinc-400 border border-zinc-800">Shoes</button>
+          <button onclick="filterCloset('outerwear')" class="closet-filter px-3.5 py-1.5 rounded-xl bg-zinc-900 text-zinc-400 border border-zinc-800">Outerwear</button>
+        </div>
+
+        <!-- Quick AI Match Generator -->
+        <div class="p-4 rounded-2xl bg-zinc-950 border border-zinc-800 flex items-center justify-between">
+          <div>
+            <span class="text-xs font-bold text-white block">Auto-Style an Outfit</span>
+            <span class="text-[10px] text-zinc-400">Weather-matched look from closet</span>
+          </div>
+          <button onclick="generateClosetOutfit()" class="px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-700 text-xs font-bold text-zinc-200 hover:text-white flex items-center gap-1.5">
+            <i data-lucide="wand-2" class="w-3.5 h-3.5 text-blue-400"></i> Match
+          </button>
+        </div>
+
+        <!-- Grid -->
+        <div id="closetGrid" class="grid grid-cols-2 gap-3 pt-1"></div>
+      </div>
+
+      <!-- TAB 3: PROGRESS -->
+      <div id="tab-progress" class="app-tab hidden space-y-4">
+        <h2 class="text-2xl font-black">Progress</h2>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div class="p-4 rounded-3xl bg-zinc-950 border border-zinc-800">
+            <span class="text-xs text-zinc-500 font-semibold">Average Score</span>
+            <div class="text-3xl font-black mt-1">74</div>
+            <span class="text-[10px] text-emerald-400 block mt-2">+6 pts this week</span>
+          </div>
+          <div class="p-4 rounded-3xl bg-zinc-950 border border-zinc-800">
+            <span class="text-xs text-zinc-500 font-semibold">Total Scans</span>
+            <div class="text-3xl font-black mt-1" id="totalScansCount">3</div>
+            <span class="text-[10px] text-zinc-500 block mt-2">Free Unlimited</span>
+          </div>
+        </div>
+
+        <div class="p-5 rounded-3xl bg-zinc-950 border border-zinc-800 space-y-4">
+          <h4 class="text-sm font-bold">Scoring Factors</h4>
+          <div class="space-y-3 text-xs">
+            <div>
+              <div class="flex justify-between text-zinc-300 font-medium mb-1">
+                <span>Proportion & Silhouette</span><span class="font-bold">76/100</span>
+              </div>
+              <div class="w-full h-1.5 bg-zinc-900 rounded-full overflow-hidden">
+                <div class="h-full bg-blue-500" style="width: 76%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="flex justify-between text-zinc-300 font-medium mb-1">
+                <span>Color Palette Harmony</span><span class="font-bold">82/100</span>
+              </div>
+              <div class="w-full h-1.5 bg-zinc-900 rounded-full overflow-hidden">
+                <div class="h-full bg-cyan-400" style="width: 82%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="flex justify-between text-zinc-300 font-medium mb-1">
+                <span>Weather Match</span><span class="font-bold">65/100</span>
+              </div>
+              <div class="w-full h-1.5 bg-zinc-900 rounded-full overflow-hidden">
+                <div class="h-full bg-purple-500" style="width: 65%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 4: PROFILE -->
+      <div id="tab-profile" class="app-tab hidden space-y-4">
+        <h2 class="text-2xl font-black">Profile</h2>
+
+        <div class="rounded-3xl bg-zinc-950 border border-zinc-800 p-4 space-y-3 text-xs">
+          <span class="font-bold text-zinc-500 uppercase tracking-wider text-[10px]">Your Preferences</span>
+          <div class="flex items-center justify-between py-1">
+            <span class="text-zinc-300">Cut / Silhouette</span>
+            <span id="profileCutStyle" class="text-zinc-400 font-semibold">Baggy / Oversized</span>
+          </div>
+          <div class="flex items-center justify-between py-1 border-t border-zinc-900">
+            <span class="text-zinc-300">Aesthetic Baseline</span>
+            <span id="profileTargetStyle" class="text-zinc-400 font-semibold">Streetwear</span>
+          </div>
+          <div class="flex items-center justify-between py-1 border-t border-zinc-900">
+            <span class="text-zinc-300">Styling Rules</span>
+            <span id="profileFixRule" class="text-zinc-400 font-semibold">Only clothes I own</span>
+          </div>
+        </div>
+
+        <div class="rounded-3xl bg-zinc-950 border border-zinc-800 p-4 space-y-3 text-xs">
+          <span class="font-bold text-zinc-500 uppercase tracking-wider text-[10px]">Features</span>
+          <div class="flex items-center justify-between py-1">
+            <span class="text-zinc-300">Auto-Detect Weather (GPS)</span>
+            <input type="checkbox" id="gpsToggle" checked onchange="toggleGPSPreference(this.checked)" class="accent-white cursor-pointer" />
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ==================== PRE-SCAN SHEET (2 FIT-SPECIFIC QUESTIONS) ==================== -->
+    <div id="modal-prescan" class="hidden fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex flex-col justify-end">
+      <div class="bg-zinc-950 border-t border-zinc-800 rounded-t-3xl p-6 space-y-5 animate-slide-up">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-lg font-bold">About This Outfit</h3>
+            <p class="text-xs text-zinc-400">Quick details for accurate AI advice</p>
+          </div>
+          <button onclick="closePreScanModal()" class="w-8 h-8 rounded-full bg-zinc-900 text-zinc-400 flex items-center justify-center">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <!-- 1. Where are you going? -->
+        <div class="space-y-2">
+          <label class="text-xs font-semibold text-zinc-400">1. Where are you wearing this?</label>
+          <div class="grid grid-cols-3 gap-2" id="prescan-occasion-group">
+            <button onclick="selectPrescan('occasion', 'School', this)" class="ps-occ active py-2 rounded-xl text-xs font-semibold bg-white text-black">School</button>
+            <button onclick="selectPrescan('occasion', 'Casual Hang', this)" class="ps-occ py-2 rounded-xl text-xs font-semibold bg-zinc-900 text-zinc-400 border border-zinc-800">Casual</button>
+            <button onclick="selectPrescan('occasion', 'Date', this)" class="ps-occ py-2 rounded-xl text-xs font-semibold bg-zinc-900 text-zinc-400 border border-zinc-800">Date</button>
+            <button onclick="selectPrescan('occasion', 'Work', this)" class="ps-occ py-2 rounded-xl text-xs font-semibold bg-zinc-900 text-zinc-400 border border-zinc-800">Work</button>
+            <button onclick="selectPrescan('occasion', 'Gym', this)" class="ps-occ py-2 rounded-xl text-xs font-semibold bg-zinc-900 text-zinc-400 border border-zinc-800">Gym</button>
+            <button onclick="selectPrescan('occasion', 'Night Out', this)" class="ps-occ py-2 rounded-xl text-xs font-semibold bg-zinc-900 text-zinc-400 border border-zinc-800">Night Out</button>
+          </div>
+        </div>
+
+        <!-- 2. What specific angle for this fit? -->
+        <div class="space-y-2">
+          <label class="text-xs font-semibold text-zinc-400">2. What angle are you targeting today?</label>
+          <div class="grid grid-cols-2 gap-2" id="prescan-vibe-group">
+            <button onclick="selectPrescan('vibe', 'Comfortable / Cozy', this)" class="ps-vibe active py-2.5 px-3 rounded-xl text-xs font-semibold bg-white text-black text-left">Comfortable & Cozy</button>
+            <button onclick="selectPrescan('vibe', 'Sharp / Statement', this)" class="ps-vibe py-2.5 px-3 rounded-xl text-xs font-semibold bg-zinc-900 text-zinc-400 border border-zinc-800 text-left">Sharp / Statement</button>
+          </div>
+        </div>
+
+        <!-- Take / Choose Photo Action Button -->
+        <label class="w-full py-4 rounded-2xl bg-white text-black font-extrabold text-sm tracking-wide flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all shadow-lg">
+          <i data-lucide="camera" class="w-4 h-4"></i>
+          <span>Snap or Pick Photo</span>
+          <input type="file" id="scanPhotoInput" accept="image/*" class="hidden" onchange="runOutfitAnalysis(event)" />
+        </label>
+      </div>
+    </div>
+
+    <!-- ==================== MANUAL WEATHER OVERRIDE POPUP ==================== -->
+    <div id="modal-weather" class="hidden fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex flex-col justify-end">
+      <div class="bg-zinc-950 border-t border-zinc-800 rounded-t-3xl p-6 space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-base font-bold">Weather Override</h3>
+          <button onclick="document.getElementById('modal-weather').classList.add('hidden')" class="w-7 h-7 rounded-full bg-zinc-900 text-zinc-400 flex items-center justify-center">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+        <p class="text-xs text-zinc-400">No GPS? Tap your current conditions:</p>
+
+        <div class="grid grid-cols-2 gap-2 text-xs font-semibold">
+          <button onclick="setManualWeather('Sunny & Warm', '76°F', 'sun')" class="p-3 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 flex items-center gap-2">☀️ Sunny / 76°F</button>
+          <button onclick="setManualWeather('Mild & Overcast', '62°F', 'cloud')" class="p-3 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 flex items-center gap-2">⛅ Mild / 62°F</button>
+          <button onclick="setManualWeather('Cold & Crisp', '46°F', 'wind')" class="p-3 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 flex items-center gap-2">💨 Cold / 46°F</button>
+          <button onclick="setManualWeather('Rainy & Wet', '52°F', 'cloud-rain')" class="p-3 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 flex items-center gap-2">🌧️ Rainy / 52°F</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== SCAN RESULT MODAL ==================== -->
+    <div id="modal-result" class="hidden fixed inset-0 bg-black/95 backdrop-blur-md z-50 p-6 flex flex-col justify-between overflow-y-auto no-scrollbar">
+      <div>
+        <div class="flex justify-between items-center pb-4 border-b border-zinc-900">
+          <span class="text-xs font-bold text-zinc-400 uppercase tracking-wider">Analysis Result</span>
+          <button onclick="document.getElementById('modal-result').classList.add('hidden')" class="w-8 h-8 rounded-full bg-zinc-900 flex items-center justify-center">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <div class="flex items-center gap-4 my-6">
+          <img id="resultImagePreview" class="w-24 h-32 rounded-2xl object-cover bg-zinc-900 border border-zinc-800" src="" />
+          <div>
+            <div class="flex items-baseline gap-1">
+              <span id="resultScore" class="text-5xl font-black text-white">84</span>
+              <span class="text-zinc-500 font-bold">/100</span>
+            </div>
+            <p id="resultVibeBadge" class="text-xs font-bold text-emerald-400 mt-1">Weather & Occasion Synced</p>
+          </div>
+        </div>
+
+        <div class="space-y-3 text-xs">
+          <div class="p-4 rounded-2xl bg-zinc-950 border border-zinc-800">
+            <div class="text-emerald-400 font-bold mb-1 flex items-center gap-1.5"><i data-lucide="check" class="w-3.5 h-3.5"></i> What Works</div>
+            <p id="resultPros" class="text-zinc-300 leading-relaxed">The oversized silhouette drapes cleanly and matches today's temperature.</p>
+          </div>
+          <div class="p-4 rounded-2xl bg-zinc-950 border border-zinc-800">
+            <div class="text-amber-400 font-bold mb-1 flex items-center gap-1.5"><i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Quick Styling Tweak</div>
+            <p id="resultFix" class="text-zinc-300 leading-relaxed">Try rolling the cuff once to reveal more footwear line (+3 score).</p>
+          </div>
+        </div>
+      </div>
+
+      <button onclick="document.getElementById('modal-result').classList.add('hidden')" class="w-full mt-6 py-4 rounded-2xl bg-white text-black font-extrabold text-sm tracking-wide">
+        Done
+      </button>
+    </div>
+
+    <!-- ==================== BOTTOM TAB BAR ==================== -->
+    <nav id="bottomTabBar" class="hidden absolute bottom-0 left-0 right-0 h-16 bg-black/95 backdrop-blur-xl border-t border-zinc-900 px-6 flex justify-between items-center z-40">
+      <button onclick="switchTab('home')" class="nav-item text-white flex flex-col items-center gap-1">
+        <i data-lucide="home" class="w-5 h-5"></i>
+        <span class="text-[10px] font-semibold">Home</span>
+      </button>
+      <button onclick="switchTab('closet')" class="nav-item text-zinc-500 flex flex-col items-center gap-1">
+        <i data-lucide="hanger" class="w-5 h-5"></i>
+        <span class="text-[10px] font-semibold">Closet</span>
+      </button>
+      <!-- Center Snap Button -->
+      <button onclick="openPreScanModal()" class="w-11 h-11 rounded-full bg-white text-black -translate-y-2 flex items-center justify-center shadow-lg active:scale-95 transition-transform">
+        <i data-lucide="plus" class="w-6 h-6 stroke-[2.5]"></i>
+      </button>
+      <button onclick="switchTab('progress')" class="nav-item text-zinc-500 flex flex-col items-center gap-1">
+        <i data-lucide="bar-chart-2" class="w-5 h-5"></i>
+        <span class="text-[10px] font-semibold">Progress</span>
+      </button>
+      <button onclick="switchTab('profile')" class="nav-item text-zinc-500 flex flex-col items-center gap-1">
+        <i data-lucide="user" class="w-5 h-5"></i>
+        <span class="text-[10px] font-semibold">Profile</span>
+      </button>
+    </nav>
+
+  </div>
+
+  <script>
+    // State
+    let currentTemp = "68°F";
+    let currentWeatherDesc = "Mild";
+    let activeFilter = "all";
+    let currentOccasion = "School";
+    let currentFitAngle = "Comfortable / Cozy";
+
+    // 3 Essential First-Time Setup Questions
+    const onboardingQuestions = [
+      {
+        title: "Preferred Fit Silhouette",
+        subtitle: "How do you prefer garments to fall?",
+        options: ["Baggy / Oversized", "Relaxed & Boxy", "Slim / Tailored", "Balanced Standard"]
+      },
+      {
+        title: "Main Aesthetic Vibe",
+        subtitle: "Your primary style direction.",
+        options: ["Streetwear", "Minimal / Clean", "Smart-Casual", "Vintage / Thrift"]
+      },
+      {
+        title: "Fix Preferences",
+        subtitle: "How should the AI suggest fixes?",
+        options: ["Only using clothes I own", "Small tweaks + key basic recommendations", "Open to new suggestions"]
+      }
+    ];
+
+    let setupStepIndex = 0;
+    let userAnswers = {};
+
+    let closetItems = [
+      { id: 1, name: "Vintage Boxy Tee", category: "tops", emoji: "👕" },
+      { id: 2, name: "Wide-Leg Chino", category: "bottoms", emoji: "👖" },
+      { id: 3, name: "Low Profile Sneakers", category: "shoes", emoji: "👟" },
+      { id: 4, name: "Workwear Zip Jacket", category: "outerwear", emoji: "🧥" }
+    ];
+
+    function goToOnboardingStep(index) {
+      document.getElementById('screen-welcome').classList.add('hidden');
+      document.getElementById('screen-quick-setup').classList.remove('hidden');
+      setupStepIndex = index;
+      renderSetupQuestion();
+    }
+
+    function renderSetupQuestion() {
+      const q = onboardingQuestions[setupStepIndex];
+      document.getElementById('stepCounter').innerText = `Step ${setupStepIndex + 1} of 3`;
+      document.getElementById('setupTitle').innerText = q.title;
+      document.getElementById('setupSubtitle').innerText = q.subtitle;
+
+      // Update dots
+      for (let i = 0; i < 3; i++) {
+        const dot = document.getElementById(`dot-${i}`);
+        if (i <= setupStepIndex) {
+          dot.className = "h-1 flex-1 rounded-full bg-white transition-all";
+        } else {
+          dot.className = "h-1 flex-1 rounded-full bg-zinc-800 transition-all";
+        }
+      }
+
+      const container = document.getElementById('setupOptions');
+      container.innerHTML = '';
+
+      q.options.forEach((opt, idx) => {
+        const isSelected = userAnswers[setupStepIndex] === opt || (!userAnswers[setupStepIndex] && idx === 0);
+        if (isSelected && !userAnswers[setupStepIndex]) userAnswers[setupStepIndex] = opt;
+
+        const el = document.createElement('div');
+        el.className = `p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
+          isSelected ? 'bg-zinc-900 border-white text-white font-bold' : 'bg-zinc-950 border-zinc-800 text-zinc-400'
+        }`;
+        el.innerHTML = `
+          <span>${opt}</span>
+          <div class="w-4 h-4 rounded-full border ${isSelected ? 'border-white bg-white' : 'border-zinc-700'}"></div>
+        `;
+        el.onclick = () => {
+          userAnswers[setupStepIndex] = opt;
+          renderSetupQuestion();
+        };
+        container.appendChild(el);
+      });
+    }
+
+    function nextOnboardingQuestion() {
+      if (setupStepIndex < onboardingQuestions.length - 1) {
+        setupStepIndex++;
+        renderSetupQuestion();
+      } else {
+        // Complete Onboarding: populate profiles and show home
+        document.getElementById('profileCutStyle').innerText = userAnswers[0];
+        document.getElementById('profileTargetStyle').innerText = userAnswers[1];
+        document.getElementById('profileFixRule').innerText = userAnswers[2];
+        document.getElementById('homeStyleTag').innerText = userAnswers[1];
+
+        document.getElementById('screen-quick-setup').classList.add('hidden');
+        document.getElementById('bottomTabBar').classList.remove('hidden');
+        switchTab('home');
+        renderCloset();
+        fetchWeather();
+      }
+    }
+
+    // Weather API (Open-Meteo + GPS / Fallback)
+    function fetchWeather() {
+      if (!navigator.geolocation) {
+        setManualWeather("Mild", "68°F", "cloud-sun");
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+          try {
+            const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&temperature_unit=fahrenheit`);
+            const data = await res.json();
+            const temp = Math.round(data.current.temperature_2m);
+            const code = data.current.weather_code;
+
+            let desc = "Mild";
+            let icon = "cloud-sun";
+            if (code <= 1) { desc = "Clear"; icon = "sun"; }
+            else if (code <= 3) { desc = "Cloudy"; icon = "cloud"; }
+            else if (code >= 51 && code <= 67) { desc = "Rainy"; icon = "cloud-rain"; }
+            else if (code >= 71) { desc = "Snow"; icon = "snowflake"; }
+
+            updateWeatherDisplay(temp + "°F", desc, icon);
+          } catch {
+            setManualWeather("Mild", "66°F", "cloud-sun");
+          }
+        },
+        () => {
+          setManualWeather("Mild", "68°F", "cloud-sun");
+        }
+      );
+    }
+
+    function updateWeatherDisplay(temp, desc, iconName) {
+      currentTemp = temp;
+      currentWeatherDesc = desc;
+      document.getElementById('weatherText').innerText = `${temp} · ${desc}`;
+      document.getElementById('weatherIcon').setAttribute('data-lucide', iconName);
+      lucide.createIcons();
+    }
+
+    function toggleWeatherManualPrompt() {
+      document.getElementById('modal-weather').classList.remove('hidden');
+    }
+
+    function setManualWeather(desc, temp, icon) {
+      document.getElementById('modal-weather').classList.add('hidden');
+      updateWeatherDisplay(temp, desc, icon);
+    }
+
+    function toggleGPSPreference(enabled) {
+      if (enabled) {
+        fetchWeather();
+      } else {
+        setManualWeather("Manual", "70°F", "cloud-sun");
+      }
+    }
+
+    // Tab Navigation
+    function switchTab(tabId) {
+      document.querySelectorAll('.app-tab').forEach(t => t.classList.add('hidden'));
+      document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+
+      document.querySelectorAll('.nav-item').forEach(b => {
+        b.classList.replace('text-white', 'text-zinc-500');
+      });
+      event?.currentTarget?.classList?.replace('text-zinc-500', 'text-white');
+    }
+
+    // Pre-scan Context Modal (2 Fit-Specific Questions)
+    function openPreScanModal() {
+      document.getElementById('modal-prescan').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closePreScanModal() {
+      document.getElementById('modal-prescan').classList.add('hidden');
+    }
+
+    function selectPrescan(type, val, btn) {
+      if (type === 'occasion') {
+        currentOccasion = val;
+        document.querySelectorAll('.ps-occ').forEach(b => {
+          b.className = 'ps-occ py-2 rounded-xl text-xs font-semibold bg-zinc-900 text-zinc-400 border border-zinc-800';
+        });
+        btn.className = 'ps-occ active py-2 rounded-xl text-xs font-semibold bg-white text-black';
+      } else {
+        currentFitAngle = val;
+        document.querySelectorAll('.ps-vibe').forEach(b => {
+          b.className = 'ps-vibe py-2.5 px-3 rounded-xl text-xs font-semibold bg-zinc-900 text-zinc-400 border border-zinc-800 text-left';
+        });
+        btn.className = 'ps-vibe active py-2.5 px-3 rounded-xl text-xs font-semibold bg-white text-black text-left';
+      }
+    }
+
+    // Run Scan
+    function runOutfitAnalysis(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        closePreScanModal();
+        const score = Math.floor(Math.random() * 12) + 78;
+
+        document.getElementById('resultImagePreview').src = e.target.result;
+        document.getElementById('resultScore').innerText = score;
+        document.getElementById('resultVibeBadge').innerText = `${currentOccasion} · ${currentFitAngle}`;
+        document.getElementById('resultPros').innerText = `Proportions hit the ${userAnswers[0] || 'balanced'} silhouette well for a ${currentOccasion} fit in ${currentTemp} weather.`;
+        document.getElementById('resultFix').innerText = `Tuck or roll hem slightly to accentuate footwear line (+3 fit score).`;
+
+        document.getElementById('modal-result').classList.remove('hidden');
+        lucide.createIcons();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // Closet
+    function renderCloset() {
+      const grid = document.getElementById('closetGrid');
+      grid.innerHTML = '';
+
+      const filtered = activeFilter === 'all' 
+        ? closetItems 
+        : closetItems.filter(i => i.category === activeFilter);
+
+      document.getElementById('count-all').innerText = closetItems.length;
+
+      filtered.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'p-3 rounded-2xl bg-zinc-950 border border-zinc-800 flex flex-col justify-between';
+        card.innerHTML = `
+          <div class="h-28 rounded-xl bg-zinc-900 flex items-center justify-center text-4xl mb-2 overflow-hidden">
+            ${item.img ? `<img src="${item.img}" class="w-full h-full object-cover" />` : item.emoji}
+          </div>
+          <div>
+            <span class="text-xs font-bold text-zinc-200 block truncate">${item.name}</span>
+            <span class="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">${item.category}</span>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function filterCloset(cat) {
+      activeFilter = cat;
+      document.querySelectorAll('.closet-filter').forEach(btn => {
+        btn.className = 'closet-filter px-3.5 py-1.5 rounded-xl bg-zinc-900 text-zinc-400 border border-zinc-800';
+      });
+      event.currentTarget.className = 'closet-filter active px-3.5 py-1.5 rounded-xl bg-white text-black';
+      renderCloset();
+    }
+
+    function handleClosetItemUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        const categories = ["tops", "bottoms", "shoes", "outerwear"];
+        const randCat = categories[Math.floor(Math.random() * categories.length)];
+        closetItems.unshift({
+          id: Date.now(),
+          name: "Added Piece",
+          category: randCat,
+          img: evt.target.result
+        });
+        renderCloset();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function generateClosetOutfit() {
+      alert(`Auto-paired pieces from your closet tailored for ${currentWeatherDesc} & ${currentTemp}!`);
+    }
+
+    lucide.createIcons();
+    fetchWeather();
+  </script>
+</body>
+</html>
